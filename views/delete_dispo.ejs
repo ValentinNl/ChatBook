@@ -1,0 +1,20 @@
+<%- include("_header") -%>
+
+<h1>Supprimer disponibilite</h1>
+
+<form action="/delete_dispo" method="post">
+  <div class="form-horizontal">
+
+    <%- include("_display_dispo") -%>
+
+    <div class="form-group row">
+      <label class="col-form-label col-sm-2"></label>
+      <div class="col-sm-10">
+        <input type="submit" value="Effacer" class="btn btn-default btn-danger" />
+        <a class="btn btn-outline-dark cancel" href="/disponibilite">Annuler</a>
+      </div>
+    </div>
+  </div>
+</form>
+
+<%- include("_footer") -%>

@@ -194,3 +194,175 @@ app.post("/delete/:id", (req, res) => {
     res.redirect("/livres");
   });
 });
+
+
+// Partie sur les notifications
+app.get("/notifications", (req, res) => {
+  const sql = "select Notification.horaire, Notification.titre, Notification.contenu from Utilisateur , Notification, Notifier where Utilisateur.login = Notifier.login and Notifier.id = Notification.id ORDER BY Notification.horaire DESC LIMIT 10;";
+    db.all(sql, [], (err, rows) => {
+	    if (err) {
+			return console.error(err.message);
+	    }
+      res.render("notifications", { model: rows });
+   });
+});
+
+//Disponibilite GET
+app.get("/disponibilite", (req, res) => {
+  	const sql = "SELECT * FROM Avoir WHERE login = \"toto\" ORDER BY debut";
+    db.all(sql, [], (err, rows) => {
+	    if (err) {
+			return console.error(err.message);
+	    }
+			var h,m,s,d,j;
+			var dispos =[];
+			var tab_jour=new Array("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi");
+			var tab_mois=new Array("01", "02", "03", "04", "05", "06", "07","08","09","10","11","12");
+			rows.forEach(function (row) {
+				var dispo = {
+					date : "erreur",
+					heureDebut : "erreur",
+					heureFin : "erreur",
+					debut : "erreur",
+					fin : "erreur",
+					login: "erreur",
+					timestamp : "erreur",
+				}
+				d = new Date(Date.parse(row.debut));
+				dispo.timestamp = d.getTime();
+				if(d.getDate()<10){
+				    j = '0'+d.getDate();
+				}
+				else{
+				    j = d.getDate();
+				}
+				dispo.date = tab_jour[d.getDay()]+' '+j+'/'+tab_mois[d.getMonth()]+'/'+d.getFullYear();
+				if(d.getHours()<10){
+				    h = '0'+d.getHours();
+				}
+				else{
+				    h = d.getHours();
+				}
+
+				if(d.getMinutes()<10){
+				    m = '0'+d.getMinutes();
+				}
+				else{
+				    m = d.getMinutes();
+				}
+				dispo.heureDebut = h+':'+m;
+				d = new Date(Date.parse(row.fin));
+				if(d.getHours()<10){
+				    h = '0'+d.getHours();
+				}
+				else{
+				    h = d.getHours();
+				}
+
+				if(d.getMinutes()<10){
+				    m = '0'+d.getMinutes();
+				}
+				else{
+				    m = d.getMinutes();
+				}
+				dispo.heureFin = h+':'+m;
+				dispo.debut = row.debut;
+				dispo.fin = row.fin;
+				dispo.login = row.login;
+				dispos.push(dispo);
+			});
+			res.render("disponibilite", { dispos });
+   });
+});
+
+// GET /create /disponibilite
+app.get("/create_dispo", (req, res) => {
+  var dispo = {
+    now : "",
+		date :"",
+		radioAM :"",
+		radioPM :"",
+  }
+	const d = new Date().toISOString();
+	temp=d.split('T');
+	dispo.now = temp[0];
+  res.render("create_dispo", { dispo });
+});
+
+// POST /create /disponibilite
+app.post("/create_dispo", (req, res) => {
+  var dateDebut = req.body.date;
+	var dateFin = req.body.date;
+	if(req.body.heure == "AM"){
+		dateDebut = dateDebut+" 08:00:00";
+		dateFin = dateFin+" 12:00:00";
+	}else {
+		dateDebut = dateDebut+" 14:00:00";
+		dateFin = dateFin+" 18:00:00";
+	}
+	var sql ="select count(*) from Disponibilite where debut = ? AND fin = ?";
+  var variable = [dateDebut, dateFin];
+	db.all(sql, variable, (err, num) => {
+		if (err) {
+		return console.error(err.message);
+		}
+		if(num == 0){
+			sql = "insert into Disponibilite (debut,fin) values (?,?)";
+		  variable = [dateDebut, dateFin];
+			db.run(sql, variable, err => {
+				if (err) {
+				return console.error(err.message);
+				}
+			});
+		}
+		sql = "insert into Avoir (login,debut,fin) values (\"toto\",?,?)";
+		variable = [dateDebut, dateFin];
+		db.run(sql, variable, err => {
+			if (err) {
+			return console.error(err.message);
+			}
+		});
+    res.redirect("/disponibilite");
+  });
+});
+
+// GET /delete /disponibilite
+app.get("/delete_dispo/:id", (req, res) => {
+	var id = req.params.id;
+	dateCreneau =new Date(parseInt(id));
+	var d = dateCreneau.toISOString();
+	temp=d.split('T');
+  var dispo = {
+		date : temp[0],
+		radioAM :"",
+		radioPM :"",
+  }
+	console.log(dateCreneau.getHours());
+	if(dateCreneau.getHours() == 8){
+		dispo.radioAM = "checked";
+	}else {
+		dispo.radioPM = "checked";
+	}
+  res.render("delete_dispo", { dispo });
+});
+
+// POST /delete /disponibilite
+app.post("/delete_dispo", (req, res) => {
+	var dateDebut = req.body.date;
+	var dateFin = req.body.date;
+	if(req.body.heure == "AM"){
+		dateDebut = dateDebut+" 08:00:00";
+		dateFin = dateFin+" 12:00:00";
+	}else {
+		dateDebut = dateDebut+" 14:00:00";
+		dateFin = dateFin+" 18:00:00";
+	}
+	var sql = "DELETE from Avoir where login  = \"toto\" AND debut = ? AND fin = ?  ";
+	var variable = [dateDebut, dateFin];
+	db.all(sql, variable, (err, num) => {
+		if (err) {
+		return console.error(err.message);
+		}
+		res.redirect("/disponibilite");
+  });
+});
