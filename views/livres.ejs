@@ -1,5 +1,4 @@
 <%- include("_header") -%>
-
 <h1>Liste des livres (<%= model.length %>)</h1>
 
 <div class="table-responsive-sm">
@@ -23,6 +22,8 @@
 					<td class="d-print-none">
 						<a class="btn btn-sm btn-warning" href="/edit/<%= book.Livre_ID %>">Modifier</a>
 						<a class="btn btn-sm btn-danger" href="/delete/<%= book.Livre_ID %>">Effacer</a>
+					  <a class="btn btn-sm btn-info" href="/delete/preference/<%= book.Livre_ID %>/<%= login %>">Retirer de ma liste</a>
+					  <a class="btn btn-sm btn-info" href="/add/preference/<%= book.Livre_ID %>/<%= login %>">Ajouter à ma liste</a>
 					</td>
 				</tr>
 				<% } %>
