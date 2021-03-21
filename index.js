@@ -160,6 +160,7 @@ app.get("/disponibilite", (req, res) => {
 					timestamp : "erreur",
 				}
 				d = new Date(Date.parse(row.debut));
+				dispo.timestamp = d.getTime();
 				if(d.getDate()<10){
 				    j = '0'+d.getDate();
 				}
@@ -199,7 +200,6 @@ app.get("/disponibilite", (req, res) => {
 				dispo.debut = row.debut;
 				dispo.fin = row.fin;
 				dispo.login = row.login;
-				dispo.timestamp = d.getTime();
 				dispos.push(dispo);
 			});
 			res.render("disponibilite", { dispos });
@@ -260,14 +260,16 @@ app.post("/create_dispo", (req, res) => {
 // GET /delete /disponibilite
 app.get("/delete_dispo/:id", (req, res) => {
 	var id = req.params.id;
-	var d = new Date(parseInt(id)).toISOString();
+	dateCreneau =new Date(parseInt(id));
+	var d = dateCreneau.toISOString();
 	temp=d.split('T');
   var dispo = {
 		date : temp[0],
 		radioAM :"",
 		radioPM :"",
   }
-	if(temp[1] == "08:00"){
+	console.log(dateCreneau.getHours());
+	if(dateCreneau.getHours() == 8){
 		dispo.radioAM = "checked";
 	}else {
 		dispo.radioPM = "checked";
