@@ -198,7 +198,7 @@ app.post("/delete/:id", (req, res) => {
 
 // Partie sur les notifications
 app.get("/notifications", (req, res) => {
-  const sql = "select Notification.horaire, Notification.titre, Notification.contenu from Utilisateur , Notification, Notifier where Utilisateur.login = Notifier.login and Notifier.id = Notification.id and Utilisateur.login = \"" + req.session.login + "\"ORDER BY Notification.horaire DESC LIMIT 10;";
+  const sql = "select Notification.horaire, Notification.titre, Notification.contenu from Utilisateur , Notification, Notifier where Utilisateur.login = Notifier.login and Notifier.id = Notification.id and Utilisateur.login = \"" + req.session.login + "\" ORDER BY Notification.horaire DESC LIMIT 10;";
     db.all(sql, [], (err, rows) => {
 	    if (err) {
 			return console.error(err.message);
