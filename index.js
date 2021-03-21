@@ -62,7 +62,7 @@ app.use(function(req, res, next) {
 });
 
 app.listen(8080, () => {
-  console.log("Serveur démarré (http://192.168.1.100:8080/) !");
+  console.log("Serveur démarré (http://localhost:8080/) !");
 });
 
 app.get("/", (req, res) => {
