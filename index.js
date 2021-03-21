@@ -86,15 +86,15 @@ app.post("/login", (req, res, next) => {
   const login = req.body.login;
 
   //build sql query
-  const sql = "SELECT * FROM Utilisateurs where login = ?";
+  const sql = "SELECT * FROM Utilisateur where login = ?";
 
   //execute sql query (sql, (? = login), return err and row
   db.get(sql, login, (err, row) => {
     //manage errors
     if (err) {
-      console.log(err); 
+      console.log(err);
     } else {
-    //check if the query return something (user exist) 
+    //check if the query return something (user exist)
     if (row) {
       // defining session
       req.session.login = row.login;
@@ -209,8 +209,9 @@ app.get("/notifications", (req, res) => {
 
 //Disponibilite GET
 app.get("/disponibilite", (req, res) => {
-  	const sql = "SELECT * FROM Avoir WHERE login = \"toto\" ORDER BY debut";
-    db.all(sql, [], (err, rows) => {
+  	const sql = "SELECT * FROM Avoir WHERE login = ? ORDER BY debut";
+		var variable = [req.session.login];
+    db.all(sql, variable, (err, rows) => {
 	    if (err) {
 			return console.error(err.message);
 	    }
@@ -315,8 +316,8 @@ app.post("/create_dispo", (req, res) => {
 				}
 			});
 		}
-		sql = "insert into Avoir (login,debut,fin) values (\"toto\",?,?)";
-		variable = [dateDebut, dateFin];
+		sql = "insert into Avoir (login,debut,fin) values (?,?,?)";
+		variable = [req.session.login,dateDebut, dateFin];
 		db.run(sql, variable, err => {
 			if (err) {
 			return console.error(err.message);
@@ -357,8 +358,8 @@ app.post("/delete_dispo", (req, res) => {
 		dateDebut = dateDebut+" 14:00:00";
 		dateFin = dateFin+" 18:00:00";
 	}
-	var sql = "DELETE from Avoir where login  = \"toto\" AND debut = ? AND fin = ?  ";
-	var variable = [dateDebut, dateFin];
+	var sql = "DELETE from Avoir where login  = ? AND debut = ? AND fin = ?  ";
+	var variable = [req.session.login,dateDebut, dateFin];
 	db.all(sql, variable, (err, num) => {
 		if (err) {
 		return console.error(err.message);
