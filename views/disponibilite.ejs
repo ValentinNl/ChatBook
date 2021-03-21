@@ -1,0 +1,32 @@
+<%- include("_header") -%>
+
+<h1>Liste de vos disponibilités (<%= dispos.length %>)</h1>
+
+<div class="table-responsive-sm">
+	<table class="table table-hover">
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>Début de la disponibilite</th>
+				<th>Fin de  la disponibilite </th>
+				<th class="d-print-none">
+					<a class="btn btn-sm btn-success" href="/create_dispo">Ajouter</a>
+				</th>
+			</tr>
+		</thead>
+		<tbody>
+			<% for (const dispo of dispos) { %>
+				<tr>
+					<td><%= dispo.date %></td>
+					<td><%= dispo.heureDebut %></td>
+					<td><%= dispo.heureFin %></td>
+					<td class="d-print-none">
+						<a class="btn btn-sm btn-danger" href="/delete_dispo/<%= dispo.timestamp %>">Supprimer</a>
+					</td>
+				</tr>
+				<% } %>
+			</tbody>
+		</table>
+	</div>
+
+	<%- include("_footer") -%>
