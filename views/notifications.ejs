@@ -1,0 +1,26 @@
+<%- include("_header") -%>
+
+<h1>Notifications (<%= model.length %>)</h1>
+
+<div class="table-responsive-sm">
+	<table class="table table-hover">
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>Titre</th>
+				<th>Contenu</th>
+			</tr>
+		</thead>
+		<tbody>
+			<% for (const notif of model) { %>
+				<tr>
+					<td><%= notif.horaire %></td>
+					<td><%= notif.titre %></td>
+					<td><%= notif.contenu %></td>
+				</tr>
+				<% } %>
+			</tbody>
+		</table>
+	</div>
+
+	<%- include("_footer") -%>
