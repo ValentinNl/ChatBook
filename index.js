@@ -1,8 +1,12 @@
 const express = require("express");
-
+var session = require("express-session");
+var cookieParser = require('cookie-parser');
 const app = express();
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+
+app.use(session({secret: 'mon_secret'}));
+app.use(cookieParser());
 
 const db_name = path.join(__dirname, "data", "apptest.db");
 const db = new sqlite3.Database(db_name, err => {
@@ -42,35 +46,88 @@ app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "/public")));
 app.use(express.static("public"));
 app.use(express.urlencoded({ extended: false })); // <--- paramétrage du middleware
+app.set('trust proxy', 1) // trust first proxy
+app.use(session({
+  secret: 'secret',
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: true }
+}))
+
+
+// allow to pass req.session.login to all templates. Just need to call 'login' (see example in _header.ejs )
+app.use(function(req, res, next) {
+  res.locals.login = req.session.login;
+  next();
+});
 
 app.listen(8080, () => {
   console.log("Serveur démarré (http://localhost:8080/) !");
 });
 
 app.get("/", (req, res) => {
-  res.render("index");
+  res.render("login");
 });
 
 app.get("/about", (req, res) => {
   res.render("about");
 });
 
-app.get("/data", (req, res) => {
-	const test = {
-    	titre: "Test",
-	    items: ["un", "deux", "trois"]
-	};
-	res.render("data", { model: test });
+
+//get the login view
+app.get("/login", (req, res) => {
+  console.log(req.session);
+	res.render("login");
+});
+
+//Post for login
+app.post("/login", (req, res, next) => {
+  //get the value from the form
+  const login = req.body.login;
+
+  //build sql query
+  const sql = "SELECT * FROM Utilisateurs where login = ?";
+
+  //execute sql query (sql, (? = login), return err and row
+  db.get(sql, login, (err, row) => {
+    //manage errors
+    if (err) {
+      console.log(err); 
+    } else {
+    //check if the query return something (user exist) 
+    if (row) {
+      // defining session
+      req.session.login = row.login;
+      res.redirect("/livres");
+    } else { res.redirect("/login"); }
+    }
+  });
+});
+
+// logout function, is called when disconnect button is clicked
+app.get("/logout", (req, res) => {
+  req.session.destroy(function(err) {
+    if (err) {
+      console.log(err);
+    }
+	  res.redirect("login");
+  });
 });
 
 app.get("/livres", (req, res) => {
+  console.log(req.session);
+  // if user is identified
+  if (req.session.login) {
   const sql = "SELECT * FROM Livres ORDER BY Titre";
-    db.all(sql, [], (err, rows) => {
-	    if (err) {
-			return console.error(err.message);
-	    }
-      res.render("livres", { model: rows });
-   });
+  db.all(sql, (err, rows) => {
+    if (err) {
+      return console.error(err.message);
+    }
+    res.render("livres", {
+      model: rows
+    });
+  });
+  } else { res.redirect("/login"); }
 });
 
 // GET /edit/5
