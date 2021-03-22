@@ -8,15 +8,15 @@ const path = require("path");
 app.use(session({secret: 'mon_secret'}));
 app.use(cookieParser());
 
-const db_name = path.join(__dirname, "data", "apptest.db");
+const db_name = path.join(__dirname, "data", "ChatBook.db");
 const db = new sqlite3.Database(db_name, err => {
 	if (err) {
     	return console.error(err.message);
 	}
-    console.log("Connexion réussie à la base de données 'apptest.db'");
+    console.log("Connexion réussie à la base de données 'ChatBook.db'");
 });
 
-//const sql_create = `CREATE TABLE IF NOT EXISTS Livres (
+//const sql_create = `CREATE TABLE IF NOT EXISTS Livre (
 //  Livre_ID INTEGER PRIMARY KEY AUTOINCREMENT,
 //    Titre VARCHAR(100) NOT NULL,
 //	  Auteur VARCHAR(100) NOT NULL,
@@ -27,9 +27,9 @@ const db = new sqlite3.Database(db_name, err => {
 //  if (err) {
 //      return console.error(err.message);
 //  }
-//  console.log("Création réussie de la table 'Livres'");
+//  console.log("Création réussie de la table 'Livre'");
 //  // Alimentation de la table
-//     const sql_insert = `INSERT INTO Livres (Livre_ID, Titre, Auteur, Commentaires) VALUES
+//     const sql_insert = `INSERT INTO Livre (Livre_ID, Titre, Auteur, Commentaires) VALUES
 //	   (1, 'Mrs. Bridge', 'Evan S. Connell', 'Premier de la série'),
 //	     (2, 'Mr. Bridge', 'Evan S. Connell', 'Second de la série'),
 //		   (3, 'L''ingénue libertine', 'Colette', 'Minne + Les égarements de Minne');`;
@@ -37,7 +37,7 @@ const db = new sqlite3.Database(db_name, err => {
 //			     if (err) {
 //				       return console.error(err.message);
 //					       }
-//						       console.log("Alimentation réussie de la table 'Livres'");
+//						       console.log("Alimentation réussie de la table 'Livre'");
 //});
 //});
 
@@ -118,7 +118,7 @@ app.get("/livres", (req, res) => {
   console.log(req.session);
   // if user is identified
   if (req.session.login) {
-  const sql = "SELECT * FROM Livres ORDER BY Titre";
+  const sql = "SELECT * FROM Livre ORDER BY Titre";
   db.all(sql, (err, rows) => {
     if (err) {
       return console.error(err.message);
@@ -133,7 +133,7 @@ app.get("/livres", (req, res) => {
 // GET /edit/5
 app.get("/edit/:id", (req, res) => {
   const id = req.params.id;
-  const sql = "SELECT * FROM Livres WHERE Livre_ID = ?";
+  const sql = "SELECT * FROM Livre WHERE Livre_ID = ?";
   db.get(sql, id, (err, row) => {
     // if (err) ...
     res.render("edit", { model: row });
@@ -144,7 +144,7 @@ app.get("/edit/:id", (req, res) => {
 app.post("/edit/:id", (req, res) => {
   const id = req.params.id;
   const book = [req.body.Titre, req.body.Auteur, req.body.Commentaires, id];
-  const sql = "UPDATE Livres SET Titre = ?, Auteur = ?, Commentaires = ? WHERE (Livre_ID = ?)";
+  const sql = "UPDATE Livre SET Titre = ?, Auteur = ?, Commentaires = ? WHERE (Livre_ID = ?)";
   db.run(sql, book, err => {
     // if (err) ...
     res.redirect("/livres");
@@ -166,7 +166,7 @@ app.get("/create", (req, res) => {
 
 // POST /create
 app.post("/create", (req, res) => {
-  const sql = "INSERT INTO Livres (Titre, Auteur, Commentaires) VALUES (?, ?, ?)";
+  const sql = "INSERT INTO Livre (Titre, Auteur, Commentaires) VALUES (?, ?, ?)";
   const book = [req.body.Titre, req.body.Auteur, req.body.Commentaires];
   db.run(sql, book, err => {
     // if (err) ...
@@ -178,7 +178,7 @@ app.post("/create", (req, res) => {
 // GET /delete/5
 app.get("/delete/:id", (req, res) => {
   const id = req.params.id;
-  const sql = "SELECT * FROM Livres WHERE Livre_ID = ?";
+  const sql = "SELECT * FROM Livre WHERE Livre_ID = ?";
   db.get(sql, id, (err, row) => {
     // if (err) ...
     res.render("delete", { model: row });
@@ -188,7 +188,7 @@ app.get("/delete/:id", (req, res) => {
 // POST /delete/5
 app.post("/delete/:id", (req, res) => {
   const id = req.params.id;
-  const sql = "DELETE FROM Livres WHERE Livre_ID = ?";
+  const sql = "DELETE FROM Livre WHERE Livre_ID = ?";
   db.run(sql, id, err => {
     // if (err) ...
     res.redirect("/livres");
@@ -301,13 +301,13 @@ app.post("/create_dispo", (req, res) => {
 		dateDebut = dateDebut+" 14:00:00";
 		dateFin = dateFin+" 18:00:00";
 	}
-	var sql ="select count(*) from Disponibilite where debut = ? AND fin = ?";
+	var sql ="select count(*) as nb from Disponibilite where debut = ? AND fin = ?";
   var variable = [dateDebut, dateFin];
-	db.all(sql, variable, (err, num) => {
+	db.get(sql, variable, (err, num) => {
 		if (err) {
 		return console.error(err.message);
 		}
-		if(num == 0){
+		if(num.nb == 0){
 			sql = "insert into Disponibilite (debut,fin) values (?,?)";
 		  variable = [dateDebut, dateFin];
 			db.run(sql, variable, err => {
