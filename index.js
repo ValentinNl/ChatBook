@@ -5,6 +5,77 @@ const app = express();
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
+// Functions
+function calcul_creneaux(db){
+	// Déclaration variable
+	var db_creneaux_non_existants, db_utilisateurs_par_creneaux;
+	// Récupération des créneaux n'existants pas
+	const sql = "select Avoir.debut, Avoir.fin, Livre.Livre_ID, Livre.titre from Avoir , Aimer, Utilisateur, Livre where Utilisateur.login = Avoir.login \
+							and Aimer.login = Utilisateur.login and Livre.Livre_ID = Aimer.Livre_ID group by Avoir.debut, Livre.titre having count(Utilisateur.login) >= 2 \
+							except \
+							select Reserver.debut, Reserver.fin, Livre.Livre_ID, Livre.titre from Reserver, Utilisateur, Livre where Utilisateur.login = Reserver.login \
+							and Reserver.Livre_ID = Livre.Livre_ID group by Reserver.debut;";
+	// Récupération des disponibilités pour les utilisateurs
+	const sql2 = "select Avoir.debut, Avoir.fin, Aimer.Livre_ID, Livre.titre, group_concat(Utilisateur.login) as utilisateurs from Avoir , Aimer, Utilisateur, Livre where Utilisateur.login = Avoir.login \
+									and Aimer.login = Utilisateur.login  and Livre.Livre_ID = Aimer.Livre_ID  group by Avoir.debut, Livre.titre having count(Utilisateur.login) >= 2;";
+
+	db.all(sql, [], (err, creneaux_non_existants) => {
+		if (err) {
+		return console.error(err.message);
+		}
+		console.log(creneaux_non_existants);
+		db.all(sql2, [], (err, utilisateurs_par_creneaux) => {
+			if (err) {
+			return console.error(err.message);
+			}
+			console.log(utilisateurs_par_creneaux);
+			creneaux_non_existants.forEach(function (creneau) {
+				utilisateurs_par_creneaux.forEach(function (utilisateurs) {
+					if( creneau.debut == utilisateurs.debut && creneau.fin == utilisateurs.fin && creneau.Livre_ID == utilisateurs.Livre_ID){
+						// Si le creneaux n'existe pas on ajoute les utilisateurs dedans
+						liste_utilisateur = utilisateurs.utilisateurs.split(',');
+						console.log(liste_utilisateur);
+						liste_utilisateur.forEach(function (user) {
+							const query_insert = "insert into Reserver values (?, ?, ?, ?, 'WAITING')";
+							var variable = [user, creneau.debut, creneau.fin, creneau.Livre_ID];
+							db.run(query_insert, variable, err => {
+								if (err) {
+								return console.error(err.message);
+								}
+						  });
+						});
+						// On insère les notifications
+						const query_notif = "insert into Notification (horaire, titre, contenu) values (?, 'Nouvelle réunion disponible', ?)";
+						var variable = [new Date().toISOString(), 'Nouvelle réunion à : ' + creneau.debut + ' avec ' + liste_utilisateur];
+						db.run(query_notif, variable, err => {
+							if (err) {
+							return console.error(err.message);
+							}
+						});
+						// On récpère le dernirer id de l'insert
+						db.get("SELECT max(Notification.id) as id from Notification;", [],(err, num) => {
+							if (err) {
+							return console.error(err.message);
+							}
+							console.log(num);
+							// Notification des utilisateurs
+							liste_utilisateur.forEach(function (user) {
+								const query_insert = "insert into Notifier values (?, ?)";
+								var variable = [user,num.id];
+								db.run(query_insert, variable, err => {
+									if (err) {
+									return console.error(err.message);
+									}
+							  });
+							});
+						});
+					}
+				});
+			});
+		});
+	});
+}
+
 app.use(session({secret: 'mon_secret'}));
 app.use(cookieParser());
 
@@ -62,7 +133,7 @@ app.use(function(req, res, next) {
 });
 
 app.listen(8080, () => {
-  console.log("Serveur démarré (http://localhost:8080/) !");
+  console.log("Serveur démarré (http://192.168.1.100:8080/) !");
 });
 
 app.get("/", (req, res) => {
@@ -284,6 +355,7 @@ app.get("/create_dispo", (req, res) => {
 		radioAM :"",
 		radioPM :"",
   }
+	calcul_creneaux(db);
 	const d = new Date().toISOString();
 	temp=d.split('T');
 	dispo.now = temp[0];
