@@ -1,6 +1,7 @@
 <%- include("_header") -%>
-<h1>Liste des livres (<%= model.likes.length + model.nlikes.length %>)</h1>
+<h1>Total des livres (<%= model.likes.length + model.nlikes.length %>)</h1>
 
+<h2>Livres que j'aime (<%= model.likes.length %>)</h2>
 <div class="table-responsive-sm">
 	<table class="table table-hover">
 		<thead>
@@ -26,6 +27,24 @@
 					</td>
 				</tr>
 				<% }); %>
+			</tbody>
+		</table>
+	</div>
+  
+<h2>Livres que je n'aime pas (<%= model.nlikes.length %>)</h2>
+<div class="table-responsive-sm">
+	<table class="table table-hover">
+		<thead>
+			<tr>
+				<th>Titre</th>
+				<th>Auteur</th>
+				<th>Commentaires</th>
+				<th class="d-print-none">
+					<a class="btn btn-sm btn-success" href="/create">Ajouter</a>
+				</th>
+			</tr>
+		</thead>
+		<tbody>
 			  <% model.nlikes.forEach(function(nlike) { %>
 				<tr>
 					<td><%= nlike.Titre %></td>
