@@ -1,5 +1,5 @@
 <%- include("_header") -%>
-<h1>Liste des livres (<%= model.length %>)</h1>
+<h1>Liste des livres (<%= model.likes.length + model.nlikes.length %>)</h1>
 
 <div class="table-responsive-sm">
 	<table class="table table-hover">
@@ -14,7 +14,7 @@
 			</tr>
 		</thead>
 		<tbody>
-			<% for (const book of model) { %>
+			  <% model.likes.forEach(function(book) { %>
 				<tr>
 					<td><%= book.Titre %></td>
 					<td><%= book.Auteur %></td>
@@ -22,11 +22,22 @@
 					<td class="d-print-none">
 						<a class="btn btn-sm btn-warning" href="/edit/<%= book.Livre_ID %>">Modifier</a>
 						<a class="btn btn-sm btn-danger" href="/delete/<%= book.Livre_ID %>">Effacer</a>
-					  <a class="btn btn-sm btn-info" href="/delete/preference/<%= book.Livre_ID %>/<%= login %>">Retirer de ma liste</a>
-					  <a class="btn btn-sm btn-info" href="/add/preference/<%= book.Livre_ID %>/<%= login %>">Ajouter à ma liste</a>
+					  <a class="btn btn-sm btn-info" href="/delete_preference/<%= book.Livre_ID %>/<%= login %>">Retirer de ma liste</a>
 					</td>
 				</tr>
-				<% } %>
+				<% }); %>
+			  <% model.nlikes.forEach(function(nlike) { %>
+				<tr>
+					<td><%= nlike.Titre %></td>
+					<td><%= nlike.Auteur %></td>
+					<td><%= nlike.Commentaires %></td>
+					<td class="d-print-none">
+						<a class="btn btn-sm btn-warning" href="/edit/<%= nlike.Livre_ID %>">Modifier</a>
+						<a class="btn btn-sm btn-danger" href="/delete/<%= nlike.Livre_ID %>">Effacer</a>
+					  <a class="btn btn-sm btn-info" href="/create_preference/<%= nlike.Livre_ID %>/<%= login %>">Ajouter à ma liste</a>
+					</td>
+				</tr>
+				<% }); %>
 			</tbody>
 		</table>
 	</div>
