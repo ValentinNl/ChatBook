@@ -87,31 +87,6 @@ const db = new sqlite3.Database(db_name, err => {
     console.log("Connexion réussie à la base de données 'ChatBook.db'");
 });
 
-//const sql_create = `CREATE TABLE IF NOT EXISTS Livre (
-//  Livre_ID INTEGER PRIMARY KEY AUTOINCREMENT,
-//    Titre VARCHAR(100) NOT NULL,
-//	  Auteur VARCHAR(100) NOT NULL,
-//	    Commentaires TEXT
-//);`;
-//
-//db.run(sql_create, err => {
-//  if (err) {
-//      return console.error(err.message);
-//  }
-//  console.log("Création réussie de la table 'Livre'");
-//  // Alimentation de la table
-//     const sql_insert = `INSERT INTO Livre (Livre_ID, Titre, Auteur, Commentaires) VALUES
-//	   (1, 'Mrs. Bridge', 'Evan S. Connell', 'Premier de la série'),
-//	     (2, 'Mr. Bridge', 'Evan S. Connell', 'Second de la série'),
-//		   (3, 'L''ingénue libertine', 'Colette', 'Minne + Les égarements de Minne');`;
-//		     db.run(sql_insert, err => {
-//			     if (err) {
-//				       return console.error(err.message);
-//					       }
-//						       console.log("Alimentation réussie de la table 'Livre'");
-//});
-//});
-
 app.set("view engine", "ejs");
 app.set("views", path.join(__dirname, "views"));
 app.use(express.static(path.join(__dirname, "/public")));
@@ -124,7 +99,6 @@ app.use(session({
   saveUninitialized: true,
   cookie: { secure: true }
 }))
-
 
 // allow to pass req.session.login to all templates. Just need to call 'login' (see example in _header.ejs )
 app.use(function(req, res, next) {
@@ -186,18 +160,53 @@ app.get("/logout", (req, res) => {
 });
 
 app.get("/livres", (req, res) => {
-  console.log(req.session);
   // if user is identified
   if (req.session.login) {
-  const sql = "SELECT * FROM Livre ORDER BY Titre";
-  db.all(sql, (err, rows) => {
+  const sql_liked = "SELECT * FROM Livre, Aimer WHERE Aimer.login = ? AND Livre.Livre_ID=Aimer.Livre_ID ORDER BY Livre.Titre";
+  const sql_nliked = "SELECT Livre.Livre_ID, Livre.Titre, Livre.Commentaires, Livre.Auteur FROM Livre EXCEPT select Livre.Livre_ID, Livre.Titre, Livre.Commentaires, Livre.Auteur from Livre, Aimer where Livre.Livre_ID = Aimer.Livre_ID AND ? = Aimer.login ORDER BY Livre.Titre";
+  db.all(sql_liked, req.session.login, (err, likes) => {
     if (err) {
       return console.error(err.message);
     }
-    res.render("livres", {
-      model: rows
+    db.all(sql_nliked, req.session.login, (err, nlikes) => {
+      if (err) {
+        return console.error(err.message);
+      }
+      const sql_results = {nlikes: nlikes, likes:  likes};
+      console.log(sql_results);
+      res.render('livres.ejs', {model: sql_results}); 
     });
   });
+  } else { res.redirect("/login"); }
+});
+
+//add a book into Aimer table for the logged in user
+app.get("/create_preference/:livre/:login", (req, res) => {
+  // if user is identified
+  if (req.session.login) {
+    const values = [req.params.login, req.params.livre];
+    const sql = "INSERT INTO Aimer (login, Livre_ID) VALUES (?, ?)";
+    db.run(sql, values,(err, rows) => {
+      if (err) {
+        return console.error(err.message);
+      }
+      res.redirect("/livres");
+    });
+  } else { res.redirect("/login"); }
+});
+
+//delete a book from preference of logged in user
+app.get("/delete_preference/:livre/:login", (req, res) => {
+  // if user is identified
+  if (req.session.login) {
+    const values = [req.params.login, req.params.livre];
+    const sql = "DELETE FROM Aimer WHERE login = ? AND Livre_ID = ?";
+    db.run(sql, values,(err, rows) => {
+      if (err) {
+        return console.error(err.message);
+      }
+      res.redirect("/livres");
+    });
   } else { res.redirect("/login"); }
 });
 
