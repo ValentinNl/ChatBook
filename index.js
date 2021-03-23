@@ -33,11 +33,11 @@ function calcul_creneaux(db){
 				utilisateurs_par_creneaux.forEach(function (utilisateurs) {
 					if( creneau.debut == utilisateurs.debut && creneau.fin == utilisateurs.fin && creneau.Livre_ID == utilisateurs.Livre_ID){
 						// Si le creneaux n'existe pas on ajoute les utilisateurs dedans
-						liste_utilisateur = utilisateurs.utilisateurs.split(',');
+						var liste_utilisateur = utilisateurs.utilisateurs.split(',');
 						console.log(liste_utilisateur);
-						liste_utilisateur.forEach(function (user) {
+						liste_utilisateur.forEach(function (userReservation) {
 							const query_insert = "insert into Reserver values (?, ?, ?, ?, 'WAITING')";
-							var variable = [user, creneau.debut, creneau.fin, creneau.Livre_ID];
+							var variable = [userReservation, creneau.debut, creneau.fin, creneau.Livre_ID];
 							db.run(query_insert, variable, err => {
 								if (err) {
 								return console.error(err.message);
@@ -45,27 +45,17 @@ function calcul_creneaux(db){
 						  });
 						});
 						// On insère les notifications
-						const query_notif = "insert into Notification (horaire, titre, contenu) values (?, 'Nouvelle réunion disponible', ?)";
-						var variable = [new Date().toISOString(), 'Nouvelle réunion à : ' + creneau.debut + ' avec ' + liste_utilisateur];
-						db.run(query_notif, variable, err => {
-							if (err) {
-							return console.error(err.message);
-							}
-						});
-						// On récpère le dernirer id de l'insert
-						db.get("SELECT max(Notification.id) as id from Notification;", [],(err, num) => {
-							if (err) {
-							return console.error(err.message);
-							}
-							console.log(num);
-							// Notification des utilisateurs
-							liste_utilisateur.forEach(function (user) {
-								const query_insert = "insert into Notifier values (?, ?)";
-								var variable = [user,num.id];
-								db.run(query_insert, variable, err => {
-									if (err) {
-									return console.error(err.message);
-									}
+						db.serialize(() => {
+							var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, 'Nouvelle réunion disponible', ?)");
+						  query1.run(new Date().toISOString(), 'Nouvelle réunion à : ' + creneau.debut , function (err) {
+						    if (err) throw err;
+						    var lastID = this.lastID;
+								// Notification des utilisateurs
+								liste_utilisateur.forEach(function (userNotification) {
+									var query2 = db.prepare("insert into Notifier values (?, ?)");
+									query2.run(userNotification,lastID, function (err) {
+								    if (err) throw err;
+									});
 							  });
 							});
 						});
