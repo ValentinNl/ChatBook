@@ -1,0 +1,56 @@
+<%- include("_header") -%>
+<h1>Réservations (<%= model.creneaux_wait.length + model.creneaux_accept.length %>)</h1>
+
+<h2>Réservations en attentes (<%= model.creneaux_wait.length %>)</h2>
+<div class="table-responsive-sm">
+	<table class="table table-hover">
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>Début de la disponibilite</th>
+				<th>Fin de  la disponibilite</th>
+				<th>Livre</th>
+			</tr>
+		</thead>
+		<tbody>
+			  <% model.creneaux_wait.forEach(function(creneau) { %>
+				<tr>
+					<td><%= creneau.date %></td>
+					<td><%= creneau.heureDebut %></td>
+					<td><%= creneau.heureFin %></td>
+					<td><%= creneau.Titre %></td>
+					<td class="d-print-none">
+						<a class="btn btn-sm btn-success" href="/accept/<%= creneau.Livre_ID %>/<%= creneau.timestamp %>/<%= creneau.Titre %>">Accepter</a>
+						<a class="btn btn-sm btn-danger" href="/deny/<%= creneau.Livre_ID %>/<%= creneau.timestamp %>/<%= creneau.Titre %>">Refuser</a>
+					</td>
+				</tr>
+				<% }); %>
+			</tbody>
+		</table>
+	</div>
+
+<h2>Réservations Acceptées (<%= model.creneaux_accept.length %>)</h2>
+<div class="table-responsive-sm">
+	<table class="table table-hover">
+		<thead>
+			<tr>
+				<th>Date</th>
+				<th>Début de la disponibilite</th>
+				<th>Fin de  la disponibilite</th>
+				<th>Livre</th>
+			</tr>
+		</thead>
+		<tbody>
+				<% model.creneaux_accept.forEach(function(creneau) {%>
+				<tr>
+					<td><%= creneau.date %></td>
+					<td><%= creneau.heureDebut %></td>
+					<td><%= creneau.heureFin %></td>
+					<td><%= creneau.Titre %></td>
+				</tr>
+				<% }); %>
+			</tbody>
+		</table>
+	</div>
+
+	<%- include("_footer") -%>

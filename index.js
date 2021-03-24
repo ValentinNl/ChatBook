@@ -10,6 +10,39 @@ const path = require("path");
 
 
 // Functions
+//affiche de la date formaté pour etre jolie
+function affichage_date(date){
+	var tab_jour=new Array("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi");
+	var tab_mois=new Array("01", "02", "03", "04", "05", "06", "07","08","09","10","11","12");
+	var d = new Date(date);
+	if(d.getDate()<10){
+			j = '0'+d.getDate();
+	}
+	else{
+			j = d.getDate();
+	}
+	return tab_jour[d.getDay()]+' '+j+'/'+tab_mois[d.getMonth()]+'/'+d.getFullYear();
+}
+//affiche de l'heure formaté pour etre jolie
+function affichage_heure(date){
+	var h,m,d;
+	var d = new Date(date);
+	if(d.getHours()<10){
+			h = '0'+d.getHours();
+	}
+	else{
+			h = d.getHours();
+	}
+
+	if(d.getMinutes()<10){
+			m = '0'+d.getMinutes();
+	}
+	else{
+			m = d.getMinutes();
+	}
+	return h+':'+m;
+}
+
 function calcul_creneaux_non_existants(db,server){
 	// Déclaration variable
 	var db_creneaux_non_existants, db_utilisateurs_par_creneaux;
@@ -293,6 +326,8 @@ app.get("/create_preference/:livre/:login", (req, res) => {
       if (err) {
         return console.error(err.message);
       }
+			calcul_creneaux_non_existants(db,server);
+			calcul_creneaux_existants(db,server,req.session.login);
       res.redirect("/livres");
     });
   } else { res.redirect("/login"); }
@@ -315,12 +350,14 @@ app.get("/delete_preference/:livre/:login", (req, res) => {
 
 // GET /edit/5
 app.get("/edit/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "SELECT * FROM Livre WHERE Livre_ID = ?";
-  db.get(sql, id, (err, row) => {
-    // if (err) ...
-    res.render("edit", { model: row });
-  });
+	if (req.session.login) {
+	  const id = req.params.id;
+	  const sql = "SELECT * FROM Livre WHERE Livre_ID = ?";
+	  db.get(sql, id, (err, row) => {
+	    // if (err) ...
+	    res.render("edit", { model: row });
+	  });
+	} else { res.redirect("/login"); }
 });
 
 // POST /edit/5
@@ -336,16 +373,11 @@ app.post("/edit/:id", (req, res) => {
 
 // GET /create
 app.get("/create", (req, res) => {
-  res.render("create", { model: {} });
+	if (req.session.login) {
+	  res.render("create", { model: {} });
+	} else { res.redirect("/login"); }
 });
 
-// GET /create
-app.get("/create", (req, res) => {
-  const book = {
-    Auteur: "Victor Hugo"
-  }
-  res.render("create", { model: book });
-});
 
 // POST /create
 app.post("/create", (req, res) => {
@@ -360,12 +392,14 @@ app.post("/create", (req, res) => {
 
 // GET /delete/5
 app.get("/delete/:id", (req, res) => {
-  const id = req.params.id;
-  const sql = "SELECT * FROM Livre WHERE Livre_ID = ?";
-  db.get(sql, id, (err, row) => {
-    // if (err) ...
-    res.render("delete", { model: row });
-  });
+	if (req.session.login) {
+	  const id = req.params.id;
+	  const sql = "SELECT * FROM Livre WHERE Livre_ID = ?";
+	  db.get(sql, id, (err, row) => {
+	    // if (err) ...
+	    res.render("delete", { model: row });
+	  });
+	} else { res.redirect("/login"); }
 });
 
 // POST /delete/5
@@ -381,98 +415,65 @@ app.post("/delete/:id", (req, res) => {
 
 // Partie sur les notifications
 app.get("/notifications", (req, res) => {
-  const sql = "select Notification.horaire, Notification.titre, Notification.contenu from Utilisateur , Notification, Notifier where Utilisateur.login = Notifier.login and Notifier.id = Notification.id and Utilisateur.login = \"" + req.session.login + "\" ORDER BY Notification.horaire DESC LIMIT 10;";
-    db.all(sql, [], (err, rows) => {
-	    if (err) {
-			return console.error(err.message);
-	    }
-      res.render("notifications", { model: rows });
-   });
+	if (req.session.login) {
+	  const sql = "select Notification.horaire, Notification.titre, Notification.contenu from Utilisateur , Notification, Notifier where Utilisateur.login = Notifier.login and Notifier.id = Notification.id and Utilisateur.login = \"" + req.session.login + "\" ORDER BY Notification.horaire DESC LIMIT 10;";
+	    db.all(sql, [], (err, rows) => {
+		    if (err) {
+				return console.error(err.message);
+		    }
+	      res.render("notifications", { model: rows });
+	   });
+	 } else { res.redirect("/login"); }
 });
 
 //Disponibilite GET
 app.get("/disponibilite", (req, res) => {
-  	const sql = "SELECT * FROM Avoir WHERE login = ? ORDER BY debut";
-		var variable = [req.session.login];
-    db.all(sql, variable, (err, rows) => {
-	    if (err) {
-			return console.error(err.message);
-	    }
-			var h,m,s,d,j;
-			var dispos =[];
-			var tab_jour=new Array("Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi");
-			var tab_mois=new Array("01", "02", "03", "04", "05", "06", "07","08","09","10","11","12");
-			rows.forEach(function (row) {
-				var dispo = {
-					date : "erreur",
-					heureDebut : "erreur",
-					heureFin : "erreur",
-					debut : "erreur",
-					fin : "erreur",
-					login: "erreur",
-					timestamp : "erreur",
-				}
-				d = new Date(Date.parse(row.debut));
-				dispo.timestamp = d.getTime();
-				if(d.getDate()<10){
-				    j = '0'+d.getDate();
-				}
-				else{
-				    j = d.getDate();
-				}
-				dispo.date = tab_jour[d.getDay()]+' '+j+'/'+tab_mois[d.getMonth()]+'/'+d.getFullYear();
-				if(d.getHours()<10){
-				    h = '0'+d.getHours();
-				}
-				else{
-				    h = d.getHours();
-				}
-
-				if(d.getMinutes()<10){
-				    m = '0'+d.getMinutes();
-				}
-				else{
-				    m = d.getMinutes();
-				}
-				dispo.heureDebut = h+':'+m;
-				d = new Date(Date.parse(row.fin));
-				if(d.getHours()<10){
-				    h = '0'+d.getHours();
-				}
-				else{
-				    h = d.getHours();
-				}
-
-				if(d.getMinutes()<10){
-				    m = '0'+d.getMinutes();
-				}
-				else{
-				    m = d.getMinutes();
-				}
-				dispo.heureFin = h+':'+m;
-				dispo.debut = row.debut;
-				dispo.fin = row.fin;
-				dispo.login = row.login;
-				dispos.push(dispo);
-			});
-			res.render("disponibilite", { dispos });
-   });
+		if (req.session.login) {
+	  	const sql = "SELECT * FROM Avoir WHERE login = ? ORDER BY debut";
+			var variable = [req.session.login];
+	    db.all(sql, variable, (err, rows) => {
+		    if (err) {
+				return console.error(err.message);
+		    }
+				var d;
+				var dispos =[];
+				rows.forEach(function (row) {
+					var dispo = {
+						date : "erreur",
+						heureDebut : "erreur",
+						heureFin : "erreur",
+						debut : "erreur",
+						fin : "erreur",
+						timestamp : "erreur",
+					}
+					d = new Date(Date.parse(row.debut));
+					dispo.date = affichage_date(Date.parse(row.debut));
+					dispo.timestamp = d.getTime();
+					dispo.heureDebut = affichage_heure(Date.parse(row.debut));
+					dispo.heureFin = affichage_heure(Date.parse(row.fin));
+					dispo.debut = row.debut;
+					dispo.fin = row.fin;
+					dispos.push(dispo);
+				});
+				res.render("disponibilite", { dispos });
+	   });
+	 } else { res.redirect("/login"); }
 });
 
 // GET /create /disponibilite
 app.get("/create_dispo", (req, res) => {
-  var dispo = {
-    now : "",
-		date :"",
-		radioAM :"",
-		radioPM :"",
-  }
-	calcul_creneaux_non_existants(db,server);
-	calcul_creneaux_existants(db,server,req.session.login);
-	const d = new Date().toISOString();
-	temp=d.split('T');
-	dispo.now = temp[0];
-  res.render("create_dispo", { dispo });
+	if (req.session.login) {
+	  var dispo = {
+	    now : "",
+			date :"",
+			radioAM :"",
+			radioPM :"",
+	  }
+		const d = new Date().toISOString();
+		temp=d.split('T');
+		dispo.now = temp[0];
+	  res.render("create_dispo", { dispo });
+	} else { res.redirect("/login"); }
 });
 
 // POST /create /disponibilite
@@ -508,28 +509,32 @@ app.post("/create_dispo", (req, res) => {
 			return console.error(err.message);
 			}
 		});
+		calcul_creneaux_non_existants(db,server);
+		calcul_creneaux_existants(db,server,req.session.login);
     res.redirect("/disponibilite");
   });
 });
 
 // GET /delete /disponibilite
 app.get("/delete_dispo/:id", (req, res) => {
-	var id = req.params.id;
-	dateCreneau =new Date(parseInt(id));
-	var d = dateCreneau.toISOString();
-	temp=d.split('T');
-  var dispo = {
-		date : temp[0],
-		radioAM :"",
-		radioPM :"",
-  }
-	console.log(dateCreneau.getHours());
-	if(dateCreneau.getHours() == 8){
-		dispo.radioAM = "checked";
-	}else {
-		dispo.radioPM = "checked";
-	}
-  res.render("delete_dispo", { dispo });
+	if (req.session.login) {
+		var id = req.params.id;
+		dateCreneau =new Date(parseInt(id));
+		var d = dateCreneau.toISOString();
+		temp=d.split('T');
+	  var dispo = {
+			date : temp[0],
+			radioAM :"",
+			radioPM :"",
+	  }
+		console.log(dateCreneau.getHours());
+		if(dateCreneau.getHours() == 8){
+			dispo.radioAM = "checked";
+		}else {
+			dispo.radioPM = "checked";
+		}
+	  res.render("delete_dispo", { dispo });
+	} else { res.redirect("/login"); }
 });
 
 // POST /delete /disponibilite
@@ -551,4 +556,113 @@ app.post("/delete_dispo", (req, res) => {
 		}
 		res.redirect("/disponibilite");
   });
+});
+
+// GET /Reservation
+app.get("/reservation", (req, res) => {
+  // if user is identified
+  if (req.session.login) {
+  const sql_wait = "SELECT Reserver.debut,Reserver.fin,Reserver.Livre_ID,Livre.Titre from Reserver,Livre where Reserver.Livre_ID = Livre.Livre_ID AND Reserver.login = \""+req.session.login+"\"  AND Reserver.Etat = \"WAITING\"";
+  const sql_accept = "SELECT Reserver.debut,Reserver.fin,Reserver.Livre_ID,Livre.Titre from Reserver,Livre where Reserver.Livre_ID = Livre.Livre_ID AND Reserver.login = \""+req.session.login+"\"  AND Reserver.Etat = \"ACCEPTED\"";
+  db.all(sql_wait, [], (err, waits) => {
+    if (err) {
+      return console.error(err.message);
+    }
+    db.all(sql_accept, [], (err, accepts) => {
+      if (err) {
+        return console.error(err.message);
+      }
+			waits.forEach(function (wait) {
+				var d = new Date(Date.parse(wait.debut));
+				wait.date = affichage_date(Date.parse(wait.debut));
+				wait.timestamp = d.getTime();
+				wait.heureDebut = affichage_heure(Date.parse(wait.debut));
+				wait.heureFin = affichage_heure(Date.parse(wait.fin));
+			});
+			accepts.forEach(function (accept) {
+				var d = new Date(Date.parse(accept.debut));
+				accept.date = affichage_date(Date.parse(accept.debut));
+				accept.timestamp = d.getTime();
+				accept.heureDebut = affichage_heure(Date.parse(accept.debut));
+				accept.heureFin = affichage_heure(Date.parse(accept.fin));
+			});
+      const sql_results = {creneaux_wait: waits, creneaux_accept:  accepts};
+      res.render('reservation.ejs', {model: sql_results});
+    });
+  });
+  } else { res.redirect("/login"); }
+});
+
+// GET /accept or deny /Reservation
+app.get("/:action/:id/:timestamp/:titre", (req, res) => {
+	var sql,variables;
+	// if user is identified
+	if (req.session.login) {
+		const id = req.params.id;
+		const timestamp = req.params.timestamp;
+		const action = req.params.action;
+		const titre = req.params.titre;
+		var d = new Date(parseInt(timestamp)+3600000);
+		var temp = d.toISOString();
+		var tempDebut = temp.split('T');
+		var date = tempDebut[0];
+		var heure = tempDebut[1].slice(0, -5);
+		var creneaudebut = date + " " + heure;
+		var d = new Date(parseInt(timestamp)+18000000);
+		var temp = d.toISOString();
+		var tempFin = temp.split('T');
+		var date = tempFin[0];
+		var heure = tempFin[1].slice(0, -5);
+		var creneaufin = date +" "+ heure;
+		if(action == "accept"){
+			sql = "UPDATE RESERVER SET Etat = \"ACCEPTED\" WHERE login = ? and debut = ? and fin = ? and Livre_ID = ?";
+			variables = [req.session.login,creneaudebut,creneaufin,id];
+		}
+		else if(action == "deny"){
+			sql = "UPDATE RESERVER SET Etat = \"REFUSE\" WHERE login = ? and debut = ? and fin = ? and Livre_ID = ?";
+			variables = [req.session.login,creneaudebut,creneaufin,id];
+		}
+		else{
+			res.redirect("/reservation");
+		}
+		db.run(sql, variables, err => {
+			if (err) {return console.error(err.message);}
+		});
+		sql = "select Reserver.debut, Reserver.fin, Reserver.Livre_ID, count(Reserver.login), group_concat(Reserver.login) as users from Reserver where Reserver.Etat = \"WAITING\" or  Reserver.Etat = \"ACCEPTED\" group by Reserver.debut, Reserver.fin, Reserver.Livre_ID having  count(Reserver.login) < 2 ";
+		db.all(sql, [], (err, creneaux) => {
+			if (err) {return console.error(err.message);}
+			console.log(creneaux);
+			creneaux.forEach(function (creneau) {
+				// On insère les notifications
+				db.serialize(() => {
+					var data = {
+						date : new Date().toISOString(),
+						titre : 'Réunion annulée du : ' + creneau.debut ,
+						contenu : "Le livre etait :"+ titre,
+					}
+					var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
+					query1.run(data.date, data.titre,data.contenu, function (err) {
+						if (err) throw err;
+						var lastID = this.lastID;
+						var liste_utilisateur = creneau.users.split(',');
+						// Notification des utilisateurs
+						liste_utilisateur.forEach(function (userNotification) {
+							var query2 = db.prepare("insert into Notifier values (?, ?)");
+							envoieNotif(db,server,data,userNotification);
+							query2.run(userNotification,lastID, function (err) {
+								if (err) throw err;
+							});
+						});
+					});
+				});
+				sql = "DELETE FROM Reserver WHERE debut = ? and fin = ? and Livre_ID = ? and Etat != \"REFUSE\"";
+				variables = [creneaudebut,creneaufin,id];
+				db.run(sql, variables, err => {
+					if (err) {return console.error(err.message);}
+				});
+			});
+		});
+		res.redirect("/reservation")
+	}
+	else { res.redirect("/login"); }
 });
