@@ -1,12 +1,16 @@
 const express = require("express");
 var session = require("express-session");
 var cookieParser = require('cookie-parser');
+var ws = require("nodejs-websocket");
 const app = express();
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 
+
+
+
 // Functions
-function calcul_creneaux(db){
+function calcul_creneaux_non_existants(db,server){
 	// Déclaration variable
 	var db_creneaux_non_existants, db_utilisateurs_par_creneaux;
 	// Récupération des créneaux n'existants pas
@@ -14,7 +18,7 @@ function calcul_creneaux(db){
 							and Aimer.login = Utilisateur.login and Livre.Livre_ID = Aimer.Livre_ID group by Avoir.debut, Livre.titre having count(Utilisateur.login) >= 2 \
 							except \
 							select Reserver.debut, Reserver.fin, Livre.Livre_ID, Livre.titre from Reserver, Utilisateur, Livre where Utilisateur.login = Reserver.login \
-							and Reserver.Livre_ID = Livre.Livre_ID group by Reserver.debut;";
+							and Reserver.Livre_ID = Livre.Livre_ID group by Reserver.debut, Livre.Livre_ID;";
 	// Récupération des disponibilités pour les utilisateurs
 	const sql2 = "select Avoir.debut, Avoir.fin, Aimer.Livre_ID, Livre.titre, group_concat(Utilisateur.login) as utilisateurs from Avoir , Aimer, Utilisateur, Livre where Utilisateur.login = Avoir.login \
 									and Aimer.login = Utilisateur.login  and Livre.Livre_ID = Aimer.Livre_ID  group by Avoir.debut, Livre.titre having count(Utilisateur.login) >= 2;";
@@ -46,13 +50,19 @@ function calcul_creneaux(db){
 						});
 						// On insère les notifications
 						db.serialize(() => {
-							var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, 'Nouvelle réunion disponible', ?)");
-						  query1.run(new Date().toISOString(), 'Nouvelle réunion à : ' + creneau.debut , function (err) {
+							var data = {
+								date : new Date().toISOString(),
+								titre : 'Nouvelle réunion à : ' + creneau.debut ,
+								contenu : "Le livre sera :"+creneau.Titre,
+							}
+							var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
+						  query1.run(data.date, data.titre,data.contenu, function (err) {
 						    if (err) throw err;
 						    var lastID = this.lastID;
 								// Notification des utilisateurs
 								liste_utilisateur.forEach(function (userNotification) {
 									var query2 = db.prepare("insert into Notifier values (?, ?)");
+									envoieNotif(db,server,data,userNotification);
 									query2.run(userNotification,lastID, function (err) {
 								    if (err) throw err;
 									});
@@ -65,6 +75,111 @@ function calcul_creneaux(db){
 		});
 	});
 }
+
+function calcul_creneaux_existants(db,server,user){
+	// Déclaration variable
+	// Récupération des créneaux n'existants pas
+	const sql = "select Avoir.debut, Avoir.fin, Livre.Livre_ID, Livre.titre from Avoir , Aimer, Utilisateur, Livre where Utilisateur.login = Avoir.login \
+							and Aimer.login = Utilisateur.login and Livre.Livre_ID = Aimer.Livre_ID group by Avoir.debut, Livre.titre \
+							INTERSECT \
+							select Reserver.debut, Reserver.fin, Livre.Livre_ID, Livre.titre from Reserver, Utilisateur, Livre, Aimer where Utilisateur.login = Reserver.login \
+							and Reserver.Livre_ID = Livre.Livre_ID and (Reserver.debut || Livre.Livre_ID) not in ( \
+								select (Reserver.debut || Livre.Livre_ID) from Reserver, Utilisateur, Livre where Utilisateur.login = Reserver.login \
+								and Reserver.Livre_ID = Livre.Livre_ID and Utilisateur.login = \""+user+"\") \
+								and Livre.Livre_ID = Aimer.Livre_ID and Aimer.login = \""+user+"\" group by Reserver.debut";
+
+		db.all(sql, [], (err, creneaux_a_ajouter) => {
+			if (err) {
+				return console.error(err.message);
+			}
+			console.log(creneaux_a_ajouter);
+			creneaux_a_ajouter.forEach(function (creneau) {
+				const query_insert = "insert into Reserver values (?, ?, ?, ?, 'WAITING')";
+				var variable = [user, creneau.debut, creneau.fin, creneau.Livre_ID];
+				db.run(query_insert, variable, err => {
+					if (err) {
+						return console.error(err.message);
+					}
+					// On insère les notifications
+					db.serialize(() => {
+						var data = {
+							date : new Date().toISOString(),
+							titre : 'Rejoigner la réunion à : ' + creneau.debut ,
+							contenu : "Le livre sera :"+creneau.Titre,
+						}
+						var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
+						query1.run(data.date,data.titre,data.contenu , function (err) {
+							if (err) throw err;
+							envoieNotif(db,server,data,user);
+							var lastID = this.lastID;
+							// Notification de l'utilisateur
+							var query2 = db.prepare("insert into Notifier values (?, ?)");
+							query2.run(user,lastID, function (err) {
+								if (err) throw err;
+							});
+						});
+					});
+				});
+			});
+		});
+	}
+
+	function envoieNotif(db,server,donnees,user){
+		var payload = {
+			type : "NOTIF",
+			donnees : donnees,
+		}
+		var msg = JSON.stringify(payload);
+		const sql = "SELECT key FROM Utilisateur WHERE login = ?";
+	  db.get(sql, user, (err, row) => {
+			if (err) {return console.error(err.message);}
+			server.connections.forEach(function(conn) {
+				if(conn.key == row.key){
+					conn.sendText(msg)
+				}
+			})
+		});
+	}
+
+	var server = ws.createServer(function(conn) {
+
+		console.log("Nouvelle connexion");
+		const db_name = path.join(__dirname, "data", "ChatBook.db");
+		const db = new sqlite3.Database(db_name, err => {
+		if (err) {
+	 		return console.error(err.message);
+		}
+		    console.log("Connexion réussie à la base de données 'ChatBook.db'");
+		});
+
+		// Réception d'un message texte
+		conn.on("text", function(msg) {
+			console.log("Texte reçu : " + msg);
+			var payload = JSON.parse(msg);
+			if(payload.type == "INIT"){
+				const book = [conn.key, payload.data];
+				const sql = "UPDATE Utilisateur SET key = ? WHERE login = ?";
+				db.run(sql, book, err => {
+					if (err) {
+		        return console.error(err.message);
+		      }
+				});
+			}else{
+				conn.sendText("ERR");
+				conn.close();
+			}
+		});
+
+		// Fermeture de connexion
+    conn.on("close", function(code, reason) {
+    });
+
+    // En cas d'erreur
+    conn.on("error", function(err) {
+    });
+
+
+	}).listen(8001); // On écoute sur le port 8001
 
 app.use(session({secret: 'mon_secret'}));
 app.use(cookieParser());
@@ -111,7 +226,6 @@ app.get("/about", (req, res) => {
 
 //get the login view
 app.get("/login", (req, res) => {
-  console.log(req.session);
 	res.render("login");
 });
 
@@ -163,8 +277,7 @@ app.get("/livres", (req, res) => {
         return console.error(err.message);
       }
       const sql_results = {nlikes: nlikes, likes:  likes};
-      console.log(sql_results);
-      res.render('livres.ejs', {model: sql_results}); 
+      res.render('livres.ejs', {model: sql_results});
     });
   });
   } else { res.redirect("/login"); }
@@ -354,7 +467,8 @@ app.get("/create_dispo", (req, res) => {
 		radioAM :"",
 		radioPM :"",
   }
-	calcul_creneaux(db);
+	calcul_creneaux_non_existants(db,server);
+	calcul_creneaux_existants(db,server,req.session.login);
 	const d = new Date().toISOString();
 	temp=d.split('T');
 	dispo.now = temp[0];
