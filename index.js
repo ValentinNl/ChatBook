@@ -675,8 +675,8 @@ app.get("/:action/:id/:creneaudebut/:creneaufin/:titre", (req, res) => {
 				db.serialize(() => {
 					var data = {
 						date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
-						titre : 'Nouvelle proposition de réunion le ' + affichage_date(creneau.debut)+ "de "+affichage_heure(creneau.debut)+"à " + affichage_heure(creneau.fin) ,
-						contenu : "Le livre qui sera abordé à cette réunion est : "+creneau.Titre,
+						titre : 'Réunion annulé le ' + affichage_date(creneau.debut)+ "de "+affichage_heure(creneau.debut)+"à " + affichage_heure(creneau.fin) ,
+						contenu : "Il n'y a pas assez de participant",
 					}
 					var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
 					query1.run(data.date, data.titre,data.contenu, function (err) {
