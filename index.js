@@ -583,18 +583,16 @@ app.get("/reservation", (req, res) => {
 		        return console.error(err.message);
 		      }
 					waits.forEach(function (wait,index) {
-						var d = new Date(Date.parse(wait.debut));
 						wait.date = affichage_date(Date.parse(wait.debut));
-						wait.timestamp = d.getTime();
 						wait.heureDebut = affichage_heure(Date.parse(wait.debut));
 						wait.heureFin = affichage_heure(Date.parse(wait.fin));
 						wait.nbUsers = waits_num[index].nbUsers;
 						wait.listUsers = waits_num[index].listUsers;
+						console.log("debut "+wait.debut);
 					});
 					accepts.forEach(function (accept,index) {
 						var d = new Date(Date.parse(accept.debut));
 						accept.date = affichage_date(Date.parse(accept.debut));
-						accept.timestamp = d.getTime();
 						accept.heureDebut = affichage_heure(Date.parse(accept.debut));
 						accept.heureFin = affichage_heure(Date.parse(accept.fin));
 						accept.nbUsers = accepts_num[index].nbUsers;
@@ -610,26 +608,30 @@ app.get("/reservation", (req, res) => {
 });
 
 // GET /accept or deny /Reservation
-app.get("/:action/:id/:timestamp/:titre", (req, res) => {
+app.get("/:action/:id/:creneau/:titre", (req, res) => {
 	var sql,variables;
 	// if user is identified
 	if (req.session.login) {
 		const id = req.params.id;
-		const timestamp = req.params.timestamp;
+		const creneau = req.params.creneau;
 		const action = req.params.action;
 		const titre = req.params.titre;
-		var d = new Date(parseInt(timestamp)+3600000);
+		console.log("recoit "+creneau);
+		var d = new Date(creneau);
+		console.log("recoit "+d);
 		var temp = d.toISOString();
 		var tempDebut = temp.split('T');
-		var date = tempDebut[0];
-		var heure = tempDebut[1].slice(0, -5);
-		var creneaudebut = date + " " + heure;
-		var d = new Date(parseInt(timestamp)+18000000);
-		var temp = d.toISOString();
-		var tempFin = temp.split('T');
-		var date = tempFin[0];
-		var heure = tempFin[1].slice(0, -5);
-		var creneaufin = date +" "+ heure;
+		var creneaudebut = tempDebut[0];
+		var creneaufin = tempDebut[0];
+		if(d.getHours() == 8){
+			creneaudebut = creneaudebut+" 08:00:00";
+			creneaufin = creneaufin+" 12:00:00";
+		}else if(d.getHours() == 14){
+			creneaudebut = creneaudebut+" 08:00:00";
+			creneaufin = creneaufin+" 12:00:00";
+		}else{
+			console.log("erreur");
+		}
 		if(action == "accept"){
 			sql = "UPDATE RESERVER SET Etat = \"ACCEPTED\" WHERE login = ? and debut = ? and fin = ? and Livre_ID = ?";
 			variables = [req.session.login,creneaudebut,creneaufin,id];
@@ -637,6 +639,7 @@ app.get("/:action/:id/:timestamp/:titre", (req, res) => {
 		else if(action == "deny"){
 			sql = "UPDATE RESERVER SET Etat = \"REFUSE\" WHERE login = ? and debut = ? and fin = ? and Livre_ID = ?";
 			variables = [req.session.login,creneaudebut,creneaufin,id];
+			console.log(variables);
 		}
 		else{
 			res.redirect("/reservation");

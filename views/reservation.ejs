@@ -24,8 +24,8 @@
 					<td><%= creneau.nbUsers %></td>
 					<td><%= creneau.listUsers%></td>
 					<td class="d-print-none">
-						<a class="btn btn-sm btn-success" href="/accept/<%= creneau.Livre_ID %>/<%= creneau.timestamp %>/<%= creneau.Titre %>">Accepter</a>
-						<a class="btn btn-sm btn-danger" href="/deny/<%= creneau.Livre_ID %>/<%= creneau.timestamp %>/<%= creneau.Titre %>">Refuser</a>
+						<a class="btn btn-sm btn-success" href="/accept/<%= creneau.Livre_ID %>/<%= creneau.debut %>/<%= creneau.Titre %>">Accepter</a>
+						<a class="btn btn-sm btn-danger" href="/deny/<%= creneau.Livre_ID %>/<%= creneau.debut %>/<%= creneau.Titre %>">Refuser</a>
 					</td>
 				</tr>
 				<% }); %>
