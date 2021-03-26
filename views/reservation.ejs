@@ -10,6 +10,8 @@
 				<th>Début de la disponibilite</th>
 				<th>Fin de  la disponibilite</th>
 				<th>Livre</th>
+				<th>Nombre d'utilisateurs</th>
+				<th>Liste d'utilisateurs</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -19,6 +21,8 @@
 					<td><%= creneau.heureDebut %></td>
 					<td><%= creneau.heureFin %></td>
 					<td><%= creneau.Titre %></td>
+					<td><%= creneau.nbUsers %></td>
+					<td><%= creneau.listUsers%></td>
 					<td class="d-print-none">
 						<a class="btn btn-sm btn-success" href="/accept/<%= creneau.Livre_ID %>/<%= creneau.timestamp %>/<%= creneau.Titre %>">Accepter</a>
 						<a class="btn btn-sm btn-danger" href="/deny/<%= creneau.Livre_ID %>/<%= creneau.timestamp %>/<%= creneau.Titre %>">Refuser</a>
@@ -38,6 +42,8 @@
 				<th>Début de la disponibilite</th>
 				<th>Fin de  la disponibilite</th>
 				<th>Livre</th>
+				<th>Nombre d'utilisateurs</th>
+				<th>Liste d'utilisateurs</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -47,6 +53,8 @@
 					<td><%= creneau.heureDebut %></td>
 					<td><%= creneau.heureFin %></td>
 					<td><%= creneau.Titre %></td>
+					<td><%= creneau.nbUsers %></td>
+					<td><%= creneau.listUsers%></td>
 				</tr>
 				<% }); %>
 			</tbody>

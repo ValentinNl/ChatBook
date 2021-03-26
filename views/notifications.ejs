@@ -42,7 +42,7 @@
 			ws.onmessage = function(msg) {
 				var payload = JSON.parse(msg.data);
 				if(payload.type == "NOTIF"){
-					ajouteLigne(payload.donnees);
+					setTimeout(ajouteLigne(payload.donnees), 1000);
 				}
 			};
 			// Lors d'une erreur de connexion

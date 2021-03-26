@@ -84,9 +84,9 @@ function calcul_creneaux_non_existants(db,server){
 						// On insère les notifications
 						db.serialize(() => {
 							var data = {
-								date : new Date().toISOString(),
-								titre : 'Nouvelle réunion à : ' + creneau.debut ,
-								contenu : "Le livre sera :"+creneau.Titre,
+								date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
+								titre : 'Nouvelle proposition de réunion le ' + affichage_date(creneau.debut)+ "de "+affichage_heure(creneau.debut)+"à " + affichage_heure(creneau.fin) ,
+								contenu : "Le livre qui sera abordé à cette réunion est : "+creneau.Titre,
 							}
 							var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
 						  query1.run(data.date, data.titre,data.contenu, function (err) {
@@ -119,7 +119,7 @@ function calcul_creneaux_existants(db,server,user){
 							and Reserver.Livre_ID = Livre.Livre_ID and (Reserver.debut || Livre.Livre_ID) not in ( \
 								select (Reserver.debut || Livre.Livre_ID) from Reserver, Utilisateur, Livre where Utilisateur.login = Reserver.login \
 								and Reserver.Livre_ID = Livre.Livre_ID and Utilisateur.login = \""+user+"\") \
-								and Livre.Livre_ID = Aimer.Livre_ID and Aimer.login = \""+user+"\" group by Reserver.debut";
+								and Livre.Livre_ID = Aimer.Livre_ID and Aimer.login = \""+user+"\" and Reserver.etat != \"REFUSE\" group by Reserver.debut, Livre.titre having count(Reserver.login)>=2";
 
 		db.all(sql, [], (err, creneaux_a_ajouter) => {
 			if (err) {
@@ -136,9 +136,9 @@ function calcul_creneaux_existants(db,server,user){
 					// On insère les notifications
 					db.serialize(() => {
 						var data = {
-							date : new Date().toISOString(),
-							titre : 'Rejoigner la réunion à : ' + creneau.debut ,
-							contenu : "Le livre sera :"+creneau.Titre,
+							date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
+							titre : 'Nouvelle proposition pour rejoindre une réunion le ' + affichage_date(creneau.debut)+ "de "+affichage_heure(creneau.debut)+"à " + affichage_heure(creneau.fin) ,
+							contenu : "Le livre qui sera abordé à cette réunion est "+creneau.Titre,
 						}
 						var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
 						query1.run(data.date,data.titre,data.contenu , function (err) {
@@ -562,33 +562,49 @@ app.post("/delete_dispo", (req, res) => {
 app.get("/reservation", (req, res) => {
   // if user is identified
   if (req.session.login) {
-  const sql_wait = "SELECT Reserver.debut,Reserver.fin,Reserver.Livre_ID,Livre.Titre from Reserver,Livre where Reserver.Livre_ID = Livre.Livre_ID AND Reserver.login = \""+req.session.login+"\"  AND Reserver.Etat = \"WAITING\"";
-  const sql_accept = "SELECT Reserver.debut,Reserver.fin,Reserver.Livre_ID,Livre.Titre from Reserver,Livre where Reserver.Livre_ID = Livre.Livre_ID AND Reserver.login = \""+req.session.login+"\"  AND Reserver.Etat = \"ACCEPTED\"";
+  const sql_wait = "SELECT Reserver.debut,Reserver.fin,Reserver.Livre_ID, Livre.Titre from Reserver,Livre where Reserver.Livre_ID = Livre.Livre_ID AND Reserver.login = \""+req.session.login+"\"  AND Reserver.Etat = \"WAITING\" order by Reserver.debut";
+	const sql_wait_num = "SELECT count(login) as nbUsers, group_concat(login) as listUsers from Reserver where Etat != \"REFUSE\" and (Reserver.debut || Reserver.Livre_ID) in ( SELECT (Reserver.debut || Reserver.Livre_ID) from Reserver where login = \""+req.session.login+"\"and Etat != \"REFUSE\")  group by(Reserver.debut || Reserver.Livre_ID)order by (Reserver.debut || Reserver.Livre_ID)";
+  const sql_accept = "SELECT Reserver.debut,Reserver.fin,Reserver.Livre_ID, Livre.Titre from Reserver,Livre where Reserver.Livre_ID = Livre.Livre_ID AND Reserver.login = \""+req.session.login+"\"  AND Reserver.Etat = \"ACCEPTED\" order by Reserver.debut";
+	const sql_accept_num = "SELECT count(login) as nbUsers, group_concat(login) as listUsers from Reserver where Etat = \"ACCEPTED\" and (Reserver.debut || Reserver.Livre_ID) in ( SELECT (Reserver.debut || Reserver.Livre_ID) from Reserver where login = \""+req.session.login+"\" and Etat = \"ACCEPTED\")  group by(Reserver.debut || Reserver.Livre_ID)order by (Reserver.debut || Reserver.Livre_ID)";
   db.all(sql_wait, [], (err, waits) => {
     if (err) {
       return console.error(err.message);
     }
-    db.all(sql_accept, [], (err, accepts) => {
-      if (err) {
-        return console.error(err.message);
-      }
-			waits.forEach(function (wait) {
-				var d = new Date(Date.parse(wait.debut));
-				wait.date = affichage_date(Date.parse(wait.debut));
-				wait.timestamp = d.getTime();
-				wait.heureDebut = affichage_heure(Date.parse(wait.debut));
-				wait.heureFin = affichage_heure(Date.parse(wait.fin));
+		db.all(sql_wait_num, [], (err, waits_num) => {
+	    if (err) {
+	      return console.error(err.message);
+	    }
+	    db.all(sql_accept, [], (err, accepts) => {
+	      if (err) {
+	        return console.error(err.message);
+	      }
+				db.all(sql_accept_num, [], (err, accepts_num) => {
+		      if (err) {
+		        return console.error(err.message);
+		      }
+					waits.forEach(function (wait,index) {
+						var d = new Date(Date.parse(wait.debut));
+						wait.date = affichage_date(Date.parse(wait.debut));
+						wait.timestamp = d.getTime();
+						wait.heureDebut = affichage_heure(Date.parse(wait.debut));
+						wait.heureFin = affichage_heure(Date.parse(wait.fin));
+						wait.nbUsers = waits_num[index].nbUsers;
+						wait.listUsers = waits_num[index].listUsers;
+					});
+					accepts.forEach(function (accept,index) {
+						var d = new Date(Date.parse(accept.debut));
+						accept.date = affichage_date(Date.parse(accept.debut));
+						accept.timestamp = d.getTime();
+						accept.heureDebut = affichage_heure(Date.parse(accept.debut));
+						accept.heureFin = affichage_heure(Date.parse(accept.fin));
+						accept.nbUsers = accepts_num[index].nbUsers;
+						accept.listUsers = accepts_num[index].listUsers;
+					});
+		      const sql_results = {creneaux_wait: waits, creneaux_accept:  accepts};
+		      res.render('reservation.ejs', {model: sql_results});
+		    });
 			});
-			accepts.forEach(function (accept) {
-				var d = new Date(Date.parse(accept.debut));
-				accept.date = affichage_date(Date.parse(accept.debut));
-				accept.timestamp = d.getTime();
-				accept.heureDebut = affichage_heure(Date.parse(accept.debut));
-				accept.heureFin = affichage_heure(Date.parse(accept.fin));
-			});
-      const sql_results = {creneaux_wait: waits, creneaux_accept:  accepts};
-      res.render('reservation.ejs', {model: sql_results});
-    });
+		});
   });
   } else { res.redirect("/login"); }
 });
@@ -628,6 +644,37 @@ app.get("/:action/:id/:timestamp/:titre", (req, res) => {
 		db.run(sql, variables, err => {
 			if (err) {return console.error(err.message);}
 		});
+		sql = "SELECT count(login) as nbUsers, group_concat(login) as listUsers from Reserver where debut = ? and fin = ? and  Livre_ID = ? and Etat = \"ACCEPTED\"";
+		variables = [creneaudebut,creneaufin,id];
+		db.get(sql, variables, (err, num) => {
+			if (err) {
+			return console.error(err.message);
+			}
+			if(parseInt(num.nbUsers) == 2){
+				var list = num.listUsers.split(',');
+				db.serialize(() => {
+					var data = {
+						date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
+						titre : 'Réunion validé le ' + affichage_date(creneaudebut)+ "de "+affichage_heure(creneaudebut)+"à " + affichage_heure(creneaufin) ,
+						contenu : "Le livre qui sera abordé à cette réunion est : "+titre+ " avec "+list[0]+" et "+list[1],
+					}
+					var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
+					query1.run(data.date, data.titre,data.contenu, function (err) {
+						if (err) throw err;
+						var lastID = this.lastID;
+						var liste_utilisateur = num.listUsers.split(',');
+						// Notification des utilisateurs
+						liste_utilisateur.forEach(function (userNotification) {
+							var query2 = db.prepare("insert into Notifier values (?, ?)");
+							envoieNotif(db,server,data,userNotification);
+							query2.run(userNotification,lastID, function (err) {
+								if (err) throw err;
+							});
+						});
+					});
+				});
+			}
+		});
 		sql = "select Reserver.debut, Reserver.fin, Reserver.Livre_ID, count(Reserver.login), group_concat(Reserver.login) as users from Reserver where Reserver.Etat = \"WAITING\" or  Reserver.Etat = \"ACCEPTED\" group by Reserver.debut, Reserver.fin, Reserver.Livre_ID having  count(Reserver.login) < 2 ";
 		db.all(sql, [], (err, creneaux) => {
 			if (err) {return console.error(err.message);}
@@ -636,9 +683,9 @@ app.get("/:action/:id/:timestamp/:titre", (req, res) => {
 				// On insère les notifications
 				db.serialize(() => {
 					var data = {
-						date : new Date().toISOString(),
-						titre : 'Réunion annulée du : ' + creneau.debut ,
-						contenu : "Le livre etait :"+ titre,
+						date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
+						titre : 'Nouvelle proposition de réunion le ' + affichage_date(creneau.debut)+ "de "+affichage_heure(creneau.debut)+"à " + affichage_heure(creneau.fin) ,
+						contenu : "Le livre qui sera abordé à cette réunion est : "+creneau.Titre,
 					}
 					var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
 					query1.run(data.date, data.titre,data.contenu, function (err) {
@@ -660,6 +707,7 @@ app.get("/:action/:id/:timestamp/:titre", (req, res) => {
 				db.run(sql, variables, err => {
 					if (err) {return console.error(err.message);}
 				});
+				sql = "select Reserver.debut, Reserver.fin, Reserver.Livre_ID, count(Reserver.login), group_concat(Reserver.login) as users from Reserver where Reserver.Etat = \"ACCEPTED\" and debut = ? and fin = ? and Livre_ID = ? group by Reserver.debut, Reserver.fin, Reserver.Livre_ID having  count(Reserver.login) < 2 ";
 			});
 		});
 		res.redirect("/reservation")
