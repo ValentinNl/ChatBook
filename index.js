@@ -85,7 +85,7 @@ function calcul_creneaux_non_existants(db,server){
 						db.serialize(() => {
 							var data = {
 								date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
-								titre : 'Nouvelle proposition de réunion le ' + affichage_date(creneau.debut)+ "de "+affichage_heure(creneau.debut)+"à " + affichage_heure(creneau.fin) ,
+								titre : 'Nouvelle proposition de réunion le ' + affichage_date(creneau.debut)+ " de "+affichage_heure(creneau.debut)+" à " + affichage_heure(creneau.fin) ,
 								contenu : "Le livre qui sera abordé à cette réunion est : "+creneau.Titre,
 							}
 							var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
@@ -137,7 +137,7 @@ function calcul_creneaux_existants(db,server,user){
 					db.serialize(() => {
 						var data = {
 							date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
-							titre : 'Nouvelle proposition pour rejoindre une réunion le ' + affichage_date(creneau.debut)+ "de "+affichage_heure(creneau.debut)+"à " + affichage_heure(creneau.fin) ,
+							titre : 'Nouvelle proposition pour rejoindre une réunion le ' + affichage_date(creneau.debut)+ " de "+affichage_heure(creneau.debut)+" à " + affichage_heure(creneau.fin) ,
 							contenu : "Le livre qui sera abordé à cette réunion est "+creneau.Titre,
 						}
 						var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
