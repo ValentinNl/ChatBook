@@ -608,7 +608,7 @@ app.get("/reservation", (req, res) => {
 });
 
 // GET /accept or deny /Reservation
-app.get("/:action/:id/:creneau/:titre", (req, res) => {
+app.get("/:action/:id/:creneaudebut/:creneaufin/:titre", (req, res) => {
 	var sql,variables;
 	// if user is identified
 	if (req.session.login) {
@@ -616,22 +616,8 @@ app.get("/:action/:id/:creneau/:titre", (req, res) => {
 		const creneau = req.params.creneau;
 		const action = req.params.action;
 		const titre = req.params.titre;
-		console.log("recoit "+creneau);
-		var d = new Date(creneau);
-		console.log("recoit "+d);
-		var temp = d.toISOString();
-		var tempDebut = temp.split('T');
-		var creneaudebut = tempDebut[0];
-		var creneaufin = tempDebut[0];
-		if(d.getHours() == 8){
-			creneaudebut = creneaudebut+" 08:00:00";
-			creneaufin = creneaufin+" 12:00:00";
-		}else if(d.getHours() == 14){
-			creneaudebut = creneaudebut+" 08:00:00";
-			creneaufin = creneaufin+" 12:00:00";
-		}else{
-			console.log("erreur");
-		}
+		const creneaudebut = req.params.creneaudebut;
+		const creneaufin = req.params.creneaufin;
 		if(action == "accept"){
 			sql = "UPDATE RESERVER SET Etat = \"ACCEPTED\" WHERE login = ? and debut = ? and fin = ? and Livre_ID = ?";
 			variables = [req.session.login,creneaudebut,creneaufin,id];
