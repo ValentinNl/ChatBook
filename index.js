@@ -650,29 +650,31 @@ app.get("/:action/:id/:timestamp/:titre", (req, res) => {
 			if (err) {
 			return console.error(err.message);
 			}
-			if(parseInt(num.nbUsers) == 2){
-				var list = num.listUsers.split(',');
-				db.serialize(() => {
-					var data = {
-						date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
-						titre : 'Réunion validé le ' + affichage_date(creneaudebut)+ "de "+affichage_heure(creneaudebut)+"à " + affichage_heure(creneaufin) ,
-						contenu : "Le livre qui sera abordé à cette réunion est : "+titre+ " avec "+list[0]+" et "+list[1],
-					}
-					var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
-					query1.run(data.date, data.titre,data.contenu, function (err) {
-						if (err) throw err;
-						var lastID = this.lastID;
-						var liste_utilisateur = num.listUsers.split(',');
-						// Notification des utilisateurs
-						liste_utilisateur.forEach(function (userNotification) {
-							var query2 = db.prepare("insert into Notifier values (?, ?)");
-							envoieNotif(db,server,data,userNotification);
-							query2.run(userNotification,lastID, function (err) {
-								if (err) throw err;
+			if(action == "accept"){
+				if(parseInt(num.nbUsers) == 2){
+					var list = num.listUsers.split(',');
+					db.serialize(() => {
+						var data = {
+							date : affichage_date(new Date().toISOString())+" "+affichage_heure(new Date().toISOString()),
+							titre : 'Réunion validé le ' + affichage_date(creneaudebut)+ "de "+affichage_heure(creneaudebut)+"à " + affichage_heure(creneaufin) ,
+							contenu : "Le livre qui sera abordé à cette réunion est : "+titre+ " avec "+list[0]+" et "+list[1],
+						}
+						var query1 = db.prepare("insert into Notification (horaire, titre, contenu) values (?, ?, ?)");
+						query1.run(data.date, data.titre,data.contenu, function (err) {
+							if (err) throw err;
+							var lastID = this.lastID;
+							var liste_utilisateur = num.listUsers.split(',');
+							// Notification des utilisateurs
+							liste_utilisateur.forEach(function (userNotification) {
+								var query2 = db.prepare("insert into Notifier values (?, ?)");
+								envoieNotif(db,server,data,userNotification);
+								query2.run(userNotification,lastID, function (err) {
+									if (err) throw err;
+								});
 							});
 						});
 					});
-				});
+				}
 			}
 		});
 		sql = "select Reserver.debut, Reserver.fin, Reserver.Livre_ID, count(Reserver.login), group_concat(Reserver.login) as users from Reserver where Reserver.Etat = \"WAITING\" or  Reserver.Etat = \"ACCEPTED\" group by Reserver.debut, Reserver.fin, Reserver.Livre_ID having  count(Reserver.login) < 2 ";
