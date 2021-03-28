@@ -3,7 +3,7 @@
 <head>
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-	<title>AppTest</title>
+	<title>ChatBook</title>
 	<link rel="stylesheet" href="/css/bootstrap.min.css">
 </head>
 
@@ -12,27 +12,34 @@
 	<div class="container">
 
 		<nav class="navbar navbar-expand-lg navbar-light bg-light">
-			<a class="navbar-brand" href="/">AppTest</a>
+			<a class="navbar-brand" href="/">ChatBook</a>
 			<ul class="navbar-nav mr-auto">
-			<li class="nav-item">
-				<a class="nav-link" href="/about">A propos</a>
-			</li>
-			<li class="nav-item">
-				<a class="nav-link" href="/data">Données</a>
-			</li>
+      <%if(login) { %>
 			<li class="nav-item">
 				<a class="nav-link" href="/livres">Livres</a>
 			</li>
 			<li class="nav-item">
-				<a class="nav-link" href="/notifications">Notifications</a>
+				<a class="nav-link" href="/notifications">Notifications&#160;<span id="rs">&nbsp;</span></a>
 			</li>
 			<li class="nav-item">
-				<a class="nav-link" href="/disponibilite">Disponibilite</a>
+				<a class="nav-link" href="/disponibilite">Disponibilités</a>
 			</li>
+			<li class="nav-item">
+				<a class="nav-link" href="/reservation">Résevations</a>
+			</li>
+      <% } %>
+			<li class="nav-item">
+				<a class="nav-link" href="/about">A propos</a>
+			</li>
+			</ul>
+			<ul class="navbar-nav ms-auto ">
       <%if(login) { %>
-			<li class="nav-item">
-				<a class="nav-link" href="/logout">Déconnexion</a>
-			</li>
+				<li class="nav-item">
+					<a class="nav-link">Connecté en tant que <%= login %></a>
+				</li>
+				<li class="nav-item">
+					<a class="nav-link" href="/logout">Déconnexion</a>
+				</li>
       <% } %>
 			</ul>
 		</nav>

@@ -3,7 +3,7 @@
 <h1>Notifications (<%= model.length %>)</h1>
 
 <div class="table-responsive-sm">
-	<table class="table table-hover">
+	<table class="table table-hover" id="table">
 		<thead>
 			<tr>
 				<th>Date</th>
@@ -24,3 +24,67 @@
 	</div>
 
 	<%- include("_footer") -%>
+	<script>
+		var identifiant = "<%= login %>";
+		if('WebSocket' in window) {
+			var ws = new WebSocket("ws://localhost:8001/");
+			console.log("Tentative de connexion...");
+			ws.onopen = function() {
+				console.log("Socket ouvert");
+				msg = {
+					type : "INIT",
+					data : identifiant,
+				};
+				// Envoi de la chaîne texte
+				ws.send(JSON.stringify(msg));
+			};
+			// Lors de la réception d'un message
+			ws.onmessage = function(msg) {
+				var payload = JSON.parse(msg.data);
+				if(payload.type == "NOTIF"){
+					setTimeout(ajouteLigne(payload.donnees), 1000);
+				}
+			};
+			// Lors d'une erreur de connexion
+			ws.onerror = function(e) {
+				log("Erreur de connexion");
+			};
+			// Lors de la fermeture de connexion
+			ws.onclose = function(e) {
+				if(e.wasClean) {
+					log("Socket fermé proprement");
+				}
+				else {
+					console.log("Socket fermé");
+				}
+			};
+		} else {
+			alert("Ce navigateur ne supporte pas WebSockets");
+		}
+		function ajouteLigne(donnees) {
+			console.log(donnees);
+		  // Récupération d'une référence à la table
+		  var refTable = document.getElementById("table").getElementsByTagName('tbody')[0];
+
+		  // Insère une ligne dans la table à l'indice de ligne 0
+		  var nouvelleLigne = refTable.insertRow(0);
+
+		  // Insère une cellule dans la ligne à l'indice 0
+		  var nouvelleCellule1 = nouvelleLigne.insertCell(0);
+		  // Ajoute un nœud texte à la cellule
+		  var horaire = document.createTextNode(donnees.date)
+		  nouvelleCellule1.appendChild(horaire);
+
+			// Insère une cellule dans la ligne à l'indice 1
+		  var nouvelleCellule2 = nouvelleLigne.insertCell(1);
+		  // Ajoute un nœud texte à la cellule
+		  var titre = document.createTextNode(donnees.titre)
+		  nouvelleCellule2.appendChild(titre);
+
+			// Insère une cellule dans la ligne à l'indice 2
+		  var nouvelleCellule3 = nouvelleLigne.insertCell(2);
+		  // Ajoute un nœud texte à la cellule
+		  var contenue = document.createTextNode(donnees.contenu)
+		  nouvelleCellule3.appendChild(contenue);
+		}
+	</script>

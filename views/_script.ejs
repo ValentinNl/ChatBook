@@ -1,0 +1,57 @@
+<script>
+  var identifiant = "<%= login %>";
+  var i = 0;
+  if('WebSocket' in window) {
+    var ws = new WebSocket("ws://localhost:8001/");
+    console.log("Tentative de connexion...");
+    ws.onopen = function() {
+      console.log("Socket ouvert");
+      msg = {
+        type : "INIT",
+        data : identifiant,
+      };
+      // Envoi de la chaîne texte
+      ws.send(JSON.stringify(msg));
+    };
+    // Lors de la réception d'un message
+    ws.onmessage = function(msg) {
+      var payload = JSON.parse(msg.data);
+      if(payload.type == "NOTIF"){
+        var rs = document.getElementById('rs');
+        rs.style.background = 'red';
+        i++;
+        rs.innerHTML = i;
+      }
+    };
+    // Lors d'une erreur de connexion
+    ws.onerror = function(e) {
+      log("Erreur de connexion");
+    };
+    // Lors de la fermeture de connexion
+    ws.onclose = function(e) {
+      if(e.wasClean) {
+        log("Socket fermé proprement");
+      }
+      else {
+        console.log("Socket fermé");
+      }
+    };
+  } else {
+    alert("Ce navigateur ne supporte pas WebSockets");
+  }
+  function ajouteLigne(donnees) {
+
+  }
+</script>
+<style>
+      #rs {
+      -webkit-border-radius: 1.5em;
+      display: inline-block;
+      width: 1.5em;
+      height: 1.5em;
+      text-align : center;
+      bold:1px;
+      color:white;
+      font-weight: bold;
+      }
+  </style>
